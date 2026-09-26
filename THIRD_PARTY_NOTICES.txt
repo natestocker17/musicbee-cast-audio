@@ -1,0 +1,23 @@
+Third-party packages bundled with MusicBee Cast Audio
+
+Google.Protobuf/3.32.0 — BSD-3-Clause — https://www.nuget.org/packages/Google.Protobuf/3.32.0
+Microsoft.Bcl.AsyncInterfaces/9.0.8 — MIT — https://www.nuget.org/packages/Microsoft.Bcl.AsyncInterfaces/9.0.8
+Microsoft.CSharp/4.7.0 — MIT — https://www.nuget.org/packages/Microsoft.CSharp/4.7.0
+Microsoft.Extensions.DependencyInjection/9.0.8 — MIT — https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection/9.0.8
+Microsoft.Extensions.DependencyInjection.Abstractions/9.0.8 — MIT — https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection.Abstractions/9.0.8
+Microsoft.Extensions.Logging.Abstractions/9.0.8 — MIT — https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/9.0.8
+NAudio.Core/2.2.1 — MIT — https://www.nuget.org/packages/NAudio.Core/2.2.1
+NAudio.Wasapi/2.2.1 — MIT — https://www.nuget.org/packages/NAudio.Wasapi/2.2.1
+Sharpcaster/3.0.0 — MIT — https://www.nuget.org/packages/Sharpcaster/3.0.0
+System.Buffers/4.5.1 — See package license URL — https://www.nuget.org/packages/System.Buffers/4.5.1
+System.Diagnostics.DiagnosticSource/9.0.8 — MIT — https://www.nuget.org/packages/System.Diagnostics.DiagnosticSource/9.0.8
+System.IO.Pipelines/9.0.8 — MIT — https://www.nuget.org/packages/System.IO.Pipelines/9.0.8
+System.Memory/4.5.5 — See package license URL — https://www.nuget.org/packages/System.Memory/4.5.5
+System.Numerics.Vectors/4.5.0 — See package license URL — https://www.nuget.org/packages/System.Numerics.Vectors/4.5.0
+System.Reactive/5.0.0 — MIT — https://www.nuget.org/packages/System.Reactive/5.0.0
+System.Runtime.CompilerServices.Unsafe/6.0.0 — MIT — https://www.nuget.org/packages/System.Runtime.CompilerServices.Unsafe/6.0.0
+System.Text.Encodings.Web/9.0.8 — MIT — https://www.nuget.org/packages/System.Text.Encodings.Web/9.0.8
+System.Text.Json/9.0.8 — MIT — https://www.nuget.org/packages/System.Text.Json/9.0.8
+System.Threading.Tasks.Extensions/4.5.4 — See package license URL — https://www.nuget.org/packages/System.Threading.Tasks.Extensions/4.5.4
+System.ValueTuple/4.5.0 — See package license URL — https://www.nuget.org/packages/System.ValueTuple/4.5.0
+Zeroconf/3.7.16 — MIT — https://www.nuget.org/packages/Zeroconf/3.7.16
