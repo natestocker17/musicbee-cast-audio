@@ -30,10 +30,9 @@ namespace MusicBeePlugin
         private string lastFile;
         private readonly SemaphoreSlim commandGate = new SemaphoreSlim(1, 1);
         private readonly System.Windows.Forms.Timer positionTimer = new System.Windows.Forms.Timer { Interval = 500 };
+        private readonly SeekDetector seekDetector = new SeekDetector();
         private bool positionPollBusy;
-        private int lastPosition;
-        private DateTime lastPositionSample;
-        private DateTime lastSeek;
+        private int lastTrackPosition;
         private DateTime lastSilencerCheck;
 
         public PluginInfo Initialise(IntPtr apiInterfacePtr)
@@ -48,7 +47,7 @@ namespace MusicBeePlugin
             info.TargetApplication = "";
             info.VersionMajor = 1;
             info.VersionMinor = 1;
-            info.Revision = 0;
+            info.Revision = 1;
             info.MinInterfaceVersion = MinInterfaceVersion;
             info.MinApiRevision = MinApiRevision;
             info.ReceiveNotifications = ReceiveNotificationFlags.PlayerEvents;
@@ -213,7 +212,10 @@ namespace MusicBeePlugin
         private async Task CastCurrentTrackCoreAsync(bool force)
         {
             var file = CurrentLocalFile();
-            if (!force && file == lastFile) return;
+            if (file == lastFile)
+            {
+                if (!force || api.Player_GetPosition() + 500 >= lastTrackPosition) return;
+            }
             if (string.IsNullOrWhiteSpace(file) || !File.Exists(file))
                 throw new IOException("The current track is not a local file.");
 
@@ -240,13 +242,25 @@ namespace MusicBeePlugin
                 }
             };
             if (window != null) window.Status = "Loading " + Path.GetFileName(file) + "...";
-            await client.MediaChannel.LoadAsync(media, api.Player_GetPlayState() == PlayState.Playing, null);
+            // A normal track change starts at zero. Let the receiver play as soon
+            // as it has buffered the file instead of waiting for volume, mute,
+            // seek and play round trips before any sound is heard.
+            var joinMidTrack = lastFile == null && api.Player_GetPosition() > 1500;
+            var autoPlay = api.Player_GetPlayState() == PlayState.Playing && !joinMidTrack;
+            await client.MediaChannel.LoadAsync(media, autoPlay, null);
             if (!casting) return;
             lastFile = file;
             await client.MediaChannel.SetVolumeAsync(ClampVolume(api.Player_GetVolume()));
             await client.MediaChannel.SetMuteAsync(castMuted);
-            var position = api.Player_GetPosition();
-            if (position > 1500) await client.MediaChannel.SeekAsync(position / 1000.0);
+            if (joinMidTrack)
+            {
+                var position = api.Player_GetPosition();
+                if (position > 1500) await client.MediaChannel.SeekAsync(position / 1000.0);
+            }
+            if (!autoPlay && api.Player_GetPlayState() == PlayState.Playing)
+                await client.MediaChannel.PlayAsync();
+            else if (autoPlay && api.Player_GetPlayState() == PlayState.Paused)
+                await client.MediaChannel.PauseAsync();
             ResetPositionSample();
             if (window != null) window.Status = "Casting to " + receiver.Name + ": " + Path.GetFileName(file);
         }
@@ -331,8 +345,8 @@ namespace MusicBeePlugin
 
         private void ResetPositionSample()
         {
-            lastPosition = api.Player_GetPosition();
-            lastPositionSample = DateTime.UtcNow;
+            lastTrackPosition = api.Player_GetPosition();
+            seekDetector.Reset(lastTrackPosition, api.Player_GetPlayState() == PlayState.Playing, DateTime.UtcNow);
         }
 
         private async Task PollPositionAsync()
@@ -348,28 +362,27 @@ namespace MusicBeePlugin
                     lastSilencerCheck = now;
                 }
                 if (lastFile == null || commandGate.CurrentCount == 0) return;
+                if (!string.Equals(CurrentLocalFile(), lastFile, StringComparison.OrdinalIgnoreCase)) return;
                 var state = api.Player_GetPlayState();
                 var position = api.Player_GetPosition();
-                if (lastPositionSample != default(DateTime) && (state == PlayState.Playing || state == PlayState.Paused))
+                if (position + 500 >= lastTrackPosition) lastTrackPosition = position;
+                if (state == PlayState.Playing || state == PlayState.Paused)
                 {
-                    var elapsed = state == PlayState.Playing ? (int)(now - lastPositionSample).TotalMilliseconds : 0;
-                    var expected = lastPosition + elapsed;
-                    if (Math.Abs(position - expected) > 1800 && (now - lastSeek).TotalSeconds > 1.5)
+                    if (seekDetector.ShouldSeek(position, state == PlayState.Playing, now))
                     {
                         await commandGate.WaitAsync();
                         try
                         {
-                            if (casting && lastFile != null)
+                            if (casting && lastFile != null &&
+                                string.Equals(CurrentLocalFile(), lastFile, StringComparison.OrdinalIgnoreCase))
                             {
-                                await client.MediaChannel.SeekAsync(Math.Max(0, position / 1000.0));
-                                lastSeek = DateTime.UtcNow;
+                                await client.MediaChannel.SeekAsync(Math.Max(0, api.Player_GetPosition() / 1000.0));
+                                ResetPositionSample();
                             }
                         }
                         finally { commandGate.Release(); }
                     }
                 }
-                lastPosition = position;
-                lastPositionSample = DateTime.UtcNow;
             }
             catch (Exception ex)
             {
@@ -396,7 +409,7 @@ namespace MusicBeePlugin
                 server = null;
                 try { silencer?.Dispose(); } catch { }
                 silencer = null;
-                lastPositionSample = default(DateTime);
+                lastTrackPosition = 0;
                 if (window != null) window.Status = "Casting stopped.";
             }
             finally { commandGate.Release(); }

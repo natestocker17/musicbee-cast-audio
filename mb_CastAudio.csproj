@@ -3,7 +3,7 @@
     <TargetFramework>net48</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>mb_CastAudio</AssemblyName>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <RootNamespace>MusicBeePlugin</RootNamespace>
     <PlatformTarget>x86</PlatformTarget>
     <UseWindowsForms>true</UseWindowsForms>

@@ -76,12 +76,11 @@ namespace MusicBeePlugin
                         bool partial = false;
                         foreach (var line in lines)
                         {
-                            if (!line.StartsWith("Range: bytes=", StringComparison.OrdinalIgnoreCase)) continue;
-                            var range = line.Substring(13).Split('-');
-                            if (range.Length != 2 || !long.TryParse(range[0], out start) ||
-                                (range[1].Length > 0 && !long.TryParse(range[1], out end)) ||
-                                start < 0 || start >= file.Length || end < start || end >= file.Length)
-                            { Respond(stream, 416, "Range Not Satisfiable"); return; }
+                            if (!line.StartsWith("Range:", StringComparison.OrdinalIgnoreCase)) continue;
+                            var value = line.Substring(6).Trim();
+                            if (!value.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase)) continue;
+                            if (!TryParseRange(value.Substring(6), file.Length, out start, out end))
+                            { RespondRangeNotSatisfiable(stream, file.Length); return; }
                             partial = true;
                             break;
                         }
@@ -110,6 +109,43 @@ namespace MusicBeePlugin
                 catch (SocketException) { }
                 catch (ObjectDisposedException) { }
             }
+        }
+
+        private static bool TryParseRange(string value, long fileLength, out long start, out long end)
+        {
+            start = 0;
+            end = fileLength - 1;
+            if (fileLength == 0 || value.IndexOf(',') >= 0) return false;
+            var dash = value.IndexOf('-');
+            if (dash < 0 || dash != value.LastIndexOf('-')) return false;
+            var first = value.Substring(0, dash);
+            var last = value.Substring(dash + 1);
+            if (first.Length == 0)
+            {
+                long suffixLength;
+                if (!long.TryParse(last, NumberStyles.None, CultureInfo.InvariantCulture, out suffixLength) || suffixLength == 0)
+                    return false;
+                start = Math.Max(0, fileLength - suffixLength);
+            }
+            else
+            {
+                if (!long.TryParse(first, NumberStyles.None, CultureInfo.InvariantCulture, out start) || start >= fileLength)
+                    return false;
+                if (last.Length > 0)
+                {
+                    if (!long.TryParse(last, NumberStyles.None, CultureInfo.InvariantCulture, out end) || end < start)
+                        return false;
+                    end = Math.Min(end, fileLength - 1);
+                }
+            }
+            return true;
+        }
+
+        private static void RespondRangeNotSatisfiable(Stream stream, long fileLength)
+        {
+            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */" +
+                fileLength.ToString(CultureInfo.InvariantCulture) + "\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            stream.Write(bytes, 0, bytes.Length);
         }
 
         private static string ReadHeaders(Stream stream)

@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Remove="noredirect\**\*.cs" />
     <Compile Include="..\LocalMediaServer.cs" Link="LocalMediaServer.cs" />
+    <Compile Include="..\SeekDetector.cs" Link="SeekDetector.cs" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <PackageReference Include="Sharpcaster" Version="3.0.0" />
   </ItemGroup>
